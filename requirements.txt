@@ -1,0 +1,7 @@
+---
+
+## 📄 **4. requirements.txt**
+```txt
+discord.py==2.3.2
+aiosqlite==0.19.0
+python-dotenv==1.0.0
