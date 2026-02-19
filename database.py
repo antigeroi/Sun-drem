@@ -2262,7 +2262,7 @@ class Database:
                 await db.execute(
                     '''UPDATE marriages 
                        SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
-                       WHERE id = ? AND status = 'pending'''',
+                       WHERE id = ? AND status = 'pending',
                     (marriage_id,)
                 )
                 await db.commit()
@@ -2277,7 +2277,7 @@ class Database:
                 await db.execute(
                     '''UPDATE marriages 
                        SET status = 'married', married_at = CURRENT_TIMESTAMP
-                       WHERE id = ? AND status = 'accepted'''',
+                       WHERE id = ? AND status = 'accepted',
                     (marriage_id,)
                 )
                 await db.commit()
@@ -2327,7 +2327,7 @@ class Database:
             async with db.execute(
                 '''SELECT * FROM marriages 
                    WHERE (spouse1_id = ? OR spouse2_id = ?) 
-                   AND status IN ('pending', 'accepted', 'married')''',
+                   AND status IN ('pending', 'accepted', 'married'),
                 (user_id, user_id)
             ) as cursor:
                 row = await cursor.fetchone()
@@ -2412,7 +2412,7 @@ class Database:
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
                     '''UPDATE duels SET status = 'accepted' 
-                       WHERE id = ? AND status = 'pending'''',
+                       WHERE id = ? AND status = 'pending',
                     (duel_id,)
                 )
                 await db.commit()
