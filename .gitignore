@@ -1,0 +1,43 @@
+# Virtual Environment
+venv/
+env/
+ENV/
+myenv/
+env.bak/
+venv.bak/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Environment
+.env
+.env.local
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Discord
+discord.log
+
+# OS
+.DS_Store
+Thumbs.db
