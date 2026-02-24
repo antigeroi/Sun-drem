@@ -4,10 +4,30 @@ import asyncio
 import os
 import sys
 from datetime import datetime
-from config import TOKEN, GUILD_ID
+from dotenv import load_dotenv  # ВАЖНО: загружает .env файл
+
 from database import Database
 from utils.timers import TimerManager
 from utils.helpers import create_embed, EMBED_COLORS
+
+# ===== ЗАГРУЗКА ТОКЕНА ИЗ .env =====
+load_dotenv()  # Читает файл .env в текущей папке
+
+TOKEN = os.getenv("DISCORD_TOKEN")
+GUILD_ID = os.getenv("GUILD_ID")
+
+if not TOKEN:
+    print("❌ ОШИБКА: Токен не найден в .env файле!")
+    print("📁 Проверь что файл .env существует и содержит DISCORD_TOKEN=")
+    sys.exit(1)
+
+if GUILD_ID:
+    GUILD_ID = int(GUILD_ID)
+    print(f"✅ ID сервера загружен: {GUILD_ID}")
+else:
+    print("⚠️ ID сервера не указан в .env")
+    GUILD_ID = None
+# =====================================
 
 # Импорт когов
 from cogs.admin import AdminCog
@@ -76,23 +96,20 @@ class SunnyDreamBot(commands.Bot):
         
         print("🔄 Синхронизация команд...")
         try:
-            # ЖЕСТКО ПРОПИСЫВАЕМ ID ТВОЕГО СЕРВЕРА
-            guild_id = 1361604463072247958
-            guild = discord.Object(id=guild_id)
-            
-            # Очищаем глобальные команды
-            self.tree.clear_commands(guild=None)
-            
-            # Копируем команды только для твоего сервера
-            self.tree.copy_global_to(guild=guild)
-            
-            # Синхронизируем только для сервера
-            await self.tree.sync(guild=guild)
-            print(f"✅ Команды синхронизированы для сервера {guild_id}")
-            
+            if GUILD_ID:
+                guild = discord.Object(id=GUILD_ID)
+                # Очищаем глобальные команды
+                self.tree.clear_commands(guild=None)
+                # Копируем только для сервера
+                self.tree.copy_global_to(guild=guild)
+                await self.tree.sync(guild=guild)
+                print(f"✅ Команды синхронизированы для сервера {GUILD_ID}")
+            else:
+                await self.tree.sync()
+                print("✅ Команды синхронизированы глобально")
         except Exception as e:
             print(f"❌ Ошибка синхронизации: {e}")
-            print("👉 Проверь, что бот добавлен на сервер и имеет права администратора")
+            print("👉 Проверь что бот добавлен на сервер и имеет права")
     
     async def on_ready(self):
         """Событие готовности бота"""
@@ -105,7 +122,6 @@ class SunnyDreamBot(commands.Bot):
         )
         await self.change_presence(activity=activity)
         
-        # Дополнительная проверка
         print(f"🏠 Серверов: {len(self.guilds)}")
         for guild in self.guilds:
             print(f"   - {guild.name} (ID: {guild.id})")
@@ -159,18 +175,12 @@ class SunnyDreamBot(commands.Bot):
 
 async def main():
     """Запуск бота"""
-    token = "MTQ3NDA3NjE2MTkyNjYzMTUxNQ.GNFlcF.A81Jzbt3bnPm5o_BX5bFkgyplAyqlkXnTxhgb8"
-    
-    if not token:
-        print("❌ Токен не найден!")
-        sys.exit(1)
-    
     os.makedirs('data', exist_ok=True)
     
     bot = SunnyDreamBot()
     
     try:
-        await bot.start(token)
+        await bot.start(TOKEN)
     except KeyboardInterrupt:
         print("\n🛑 Бот остановлен")
     except Exception as e:
