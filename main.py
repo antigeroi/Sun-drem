@@ -12,7 +12,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = 1361604463072247958
 
 if not TOKEN:
-    print("❌ Нет токена")
+    print("❌ Нет токена в .env файле!")
     sys.exit(1)
 
 from database import Database
@@ -65,28 +65,40 @@ class SunnyDreamBot(commands.Bot):
         await self.add_cog(TreasuryCog(self))
         await self.add_cog(NPCCog(self))
         
-        print("🔄 Синхронизация команд...")
+        # ===== ВАРИАНТ 1: СИНХРОНИЗАЦИЯ ТОЛЬКО ПРИ НЕОБХОДИМОСТИ =====
+        print("🔄 Проверка команд...")
         try:
             guild = discord.Object(id=GUILD_ID)
             
-            # ЖЕСТКО: удаляем все глобальные команды
-            self.tree.clear_commands(guild=None)
+            # Проверяем какие команды уже есть
+            existing_commands = await self.tree.fetch_commands(guild=guild)
+            print(f"Найдено {len(existing_commands)} существующих команд")
             
-            # Добавляем все команды только для твоего сервера
-            for cog_name, cog in self.cogs.items():
-                for cmd in cog.get_app_commands():
-                    self.tree.add_command(cmd, guild=guild)
-            
-            # Синхронизируем
-            await self.tree.sync(guild=guild)
-            print(f"✅ Команды синхронизированы для сервера {GUILD_ID}")
-            
+            # Синхронизируем только если команд нет или их мало
+            if len(existing_commands) < 10:  # Если меньше 10 команд (явно первый запуск)
+                print("🔄 Первичная синхронизация команд...")
+                self.tree.clear_commands(guild=None)
+                self.tree.copy_global_to(guild=guild)
+                await self.tree.sync(guild=guild)
+                print(f"✅ Команды синхронизированы для сервера {GUILD_ID}")
+            else:
+                print("✅ Команды уже существуют, пропускаем синхронизацию")
+                
         except Exception as e:
             print(f"❌ Ошибка синхронизации: {e}")
+            print("👉 Бот продолжит работу, но команды могут не обновиться")
 
     async def on_ready(self):
         print(f'✅ Бот запущен как {self.user.name}')
         print(f'На серверах: {len(self.guilds)}')
+        for guild in self.guilds:
+            print(f'  - {guild.name} (ID: {guild.id})')
+        
+        activity = discord.Activity(
+            type=discord.ActivityType.playing,
+            name="Sunny Dream | /создать_персонажа"
+        )
+        await self.change_presence(activity=activity)
 
 async def main():
     os.makedirs('data', exist_ok=True)
@@ -94,6 +106,10 @@ async def main():
     try:
         await bot.start(TOKEN)
     except KeyboardInterrupt:
+        print("\n🛑 Бот остановлен")
+        await bot.close()
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
         await bot.close()
 
 if __name__ == "__main__":
