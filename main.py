@@ -76,15 +76,23 @@ class SunnyDreamBot(commands.Bot):
         
         print("🔄 Синхронизация команд...")
         try:
-            guild = discord.Object(id=1361604463072247958)
+            # ЖЕСТКО ПРОПИСЫВАЕМ ID ТВОЕГО СЕРВЕРА
+            guild_id = 1361604463072247958
+            guild = discord.Object(id=guild_id)
+            
+            # Очищаем глобальные команды
+            self.tree.clear_commands(guild=None)
+            
+            # Копируем команды только для твоего сервера
             self.tree.copy_global_to(guild=guild)
+            
+            # Синхронизируем только для сервера
             await self.tree.sync(guild=guild)
-            print(f"✅ Команды синхронизированы для сервера {1361604463072247958}")
+            print(f"✅ Команды синхронизированы для сервера {guild_id}")
+            
         except Exception as e:
             print(f"❌ Ошибка синхронизации: {e}")
-        
-        print("🚀 Запуск таймеров...")
-        await self.timer_manager.start()
+            print("👉 Проверь, что бот добавлен на сервер и имеет права администратора")
     
     async def on_ready(self):
         """Событие готовности бота"""
@@ -96,6 +104,11 @@ class SunnyDreamBot(commands.Bot):
             name="Sunny Dream | /создать_персонажа"
         )
         await self.change_presence(activity=activity)
+        
+        # Дополнительная проверка
+        print(f"🏠 Серверов: {len(self.guilds)}")
+        for guild in self.guilds:
+            print(f"   - {guild.name} (ID: {guild.id})")
     
     async def on_message(self, message):
         """Обработка сообщений"""
@@ -146,8 +159,10 @@ class SunnyDreamBot(commands.Bot):
 
 async def main():
     """Запуск бота"""
-    if not TOKEN:
-        print("❌ Токен не найден! Создайте файл .env с DISCORD_TOKEN")
+    token = "MTQ3NDA3NjE2MTkyNjYzMTUxNQ.GNFlcF.A81Jzbt3bnPm5o_BX5bFkgyplAyqlkXnTxhgb8"
+    
+    if not token:
+        print("❌ Токен не найден!")
         sys.exit(1)
     
     os.makedirs('data', exist_ok=True)
@@ -155,7 +170,7 @@ async def main():
     bot = SunnyDreamBot()
     
     try:
-        await bot.start(TOKEN)
+        await bot.start(token)
     except KeyboardInterrupt:
         print("\n🛑 Бот остановлен")
     except Exception as e:
