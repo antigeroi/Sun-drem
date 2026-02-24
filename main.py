@@ -93,7 +93,8 @@ class SunnyDreamBot(commands.Bot):
         await self.add_cog(LettersCog(self))
         await self.add_cog(TreasuryCog(self))
         await self.add_cog(NPCCog(self))
-        
+
+        print(f"Количество команд: {len(self.tree.get_commands())}")
         print("🔄 Синхронизация команд...")
         try:
             if GUILD_ID:
