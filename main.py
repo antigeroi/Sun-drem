@@ -4,32 +4,21 @@ import asyncio
 import os
 import sys
 from datetime import datetime
-from dotenv import load_dotenv  # ВАЖНО: загружает .env файл
+from dotenv import load_dotenv
+
+load_dotenv()
+
+TOKEN = os.getenv("DISCORD_TOKEN")
+GUILD_ID = 1361604463072247958
+
+if not TOKEN:
+    print("❌ Нет токена")
+    sys.exit(1)
 
 from database import Database
 from utils.timers import TimerManager
 from utils.helpers import create_embed, EMBED_COLORS
 
-# ===== ЗАГРУЗКА ТОКЕНА ИЗ .env =====
-load_dotenv()  # Читает файл .env в текущей папке
-
-TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = os.getenv("GUILD_ID")
-
-if not TOKEN:
-    print("❌ ОШИБКА: Токен не найден в .env файле!")
-    print("📁 Проверь что файл .env существует и содержит DISCORD_TOKEN=")
-    sys.exit(1)
-
-if GUILD_ID:
-    GUILD_ID = int(GUILD_ID)
-    print(f"✅ ID сервера загружен: {GUILD_ID}")
-else:
-    print("⚠️ ID сервера не указан в .env")
-    GUILD_ID = None
-# =====================================
-
-# Импорт когов
 from cogs.admin import AdminCog
 from cogs.characters import CharactersCog
 from cogs.economy import EconomyCog
@@ -52,29 +41,11 @@ class SunnyDreamBot(commands.Bot):
         intents.members = True
         intents.guilds = True
         
-        super().__init__(
-            command_prefix=self.get_prefix,
-            intents=intents,
-            help_command=None
-        )
-        
+        super().__init__(command_prefix='/', intents=intents, help_command=None)
         self.db = Database()
         self.timer_manager = TimerManager(self)
-        self.start_time = datetime.now()
-    
-    async def get_prefix(self, message):
-        """Получение префикса персонажа"""
-        if message.guild is None:
-            return '/'
-        
-        character = await self.db.get_character(message.author.id)
-        if character and character['prefix']:
-            return character['prefix']
-        
-        return '/'
-    
+
     async def setup_hook(self):
-        """Настройка бота"""
         print("⚙️ Инициализация базы данных...")
         await self.db.init_db()
         
@@ -93,102 +64,37 @@ class SunnyDreamBot(commands.Bot):
         await self.add_cog(LettersCog(self))
         await self.add_cog(TreasuryCog(self))
         await self.add_cog(NPCCog(self))
-
-        print(f"Количество команд: {len(self.tree.get_commands())}")
+        
         print("🔄 Синхронизация команд...")
         try:
-            if GUILD_ID:
-                guild = discord.Object(id=GUILD_ID)
-                # Очищаем глобальные команды
-                self.tree.clear_commands(guild=None)
-                # Копируем только для сервера
-                self.tree.copy_global_to(guild=guild)
-                await self.tree.sync(guild=guild)
-                print(f"✅ Команды синхронизированы для сервера {GUILD_ID}")
-            else:
-                await self.tree.sync()
-                print("✅ Команды синхронизированы глобально")
+            guild = discord.Object(id=GUILD_ID)
+            
+            # ЖЕСТКО: удаляем все глобальные команды
+            self.tree.clear_commands(guild=None)
+            
+            # Добавляем все команды только для твоего сервера
+            for cog_name, cog in self.cogs.items():
+                for cmd in cog.get_app_commands():
+                    self.tree.add_command(cmd, guild=guild)
+            
+            # Синхронизируем
+            await self.tree.sync(guild=guild)
+            print(f"✅ Команды синхронизированы для сервера {GUILD_ID}")
+            
         except Exception as e:
             print(f"❌ Ошибка синхронизации: {e}")
-            print("👉 Проверь что бот добавлен на сервер и имеет права")
-    
+
     async def on_ready(self):
-        """Событие готовности бота"""
-        print(f'✅ Бот вошел как {self.user.name}')
-        print(f'🆔 ID: {self.user.id}')
-        
-        activity = discord.Activity(
-            type=discord.ActivityType.playing,
-            name="Sunny Dream | /создать_персонажа"
-        )
-        await self.change_presence(activity=activity)
-        
-        print(f"🏠 Серверов: {len(self.guilds)}")
-        for guild in self.guilds:
-            print(f"   - {guild.name} (ID: {guild.id})")
-    
-    async def on_message(self, message):
-        """Обработка сообщений"""
-        if message.author.bot:
-            return
-        
-        character = await self.db.get_character(message.author.id)
-        if character:
-            await self.db.update_activity(message.author.id)
-            
-            if character['prefix'] and message.content.startswith(character['prefix']):
-                content = message.content[len(character['prefix']):].strip()
-                if content:
-                    await self.send_roleplay_message(message, character, content)
-                return
-        
-        await self.process_commands(message)
-    
-    async def send_roleplay_message(self, original_message, character, content):
-        """Отправка ролевого сообщения"""
-        try:
-            await original_message.delete()
-            
-            webhook = await original_message.channel.create_webhook(name=character['character_name'])
-            
-            await webhook.send(
-                content=content,
-                username=character['character_name'],
-                avatar_url=original_message.author.avatar.url if original_message.author.avatar else None
-            )
-            
-            await webhook.delete()
-            
-        except Exception as e:
-            print(f"Ошибка при отправке ролевого сообщения: {e}")
-    
-    async def on_command_error(self, ctx, error):
-        """Обработка ошибок команд"""
-        if isinstance(error, commands.CommandNotFound):
-            return
-        
-        embed = create_embed(
-            "❌ Ошибка",
-            str(error),
-            EMBED_COLORS["error"]
-        )
-        await ctx.send(embed=embed, ephemeral=True)
+        print(f'✅ Бот запущен как {self.user.name}')
+        print(f'На серверах: {len(self.guilds)}')
 
 async def main():
-    """Запуск бота"""
     os.makedirs('data', exist_ok=True)
-    
     bot = SunnyDreamBot()
-    
     try:
         await bot.start(TOKEN)
     except KeyboardInterrupt:
-        print("\n🛑 Бот остановлен")
-    except Exception as e:
-        print(f"❌ Ошибка: {e}")
-    finally:
-        if not bot.is_closed():
-            await bot.close()
+        await bot.close()
 
 if __name__ == "__main__":
     asyncio.run(main())
