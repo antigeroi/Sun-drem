@@ -76,14 +76,10 @@ class SunnyDreamBot(commands.Bot):
         
         print("🔄 Синхронизация команд...")
         try:
-            if GUILD_ID:
-                guild = discord.Object(id=GUILD_ID)
-                self.tree.copy_global_to(guild=guild)
-                await self.tree.sync(guild=guild)
-                print(f"✅ Команды синхронизированы для сервера {GUILD_ID}")
-            else:
-                await self.tree.sync()
-                print("✅ Команды синхронизированы глобально")
+            guild = discord.Object(id=1361604463072247958)
+            self.tree.copy_global_to(guild=guild)
+            await self.tree.sync(guild=guild)
+            print(f"✅ Команды синхронизированы для сервера {1361604463072247958}")
         except Exception as e:
             print(f"❌ Ошибка синхронизации: {e}")
         
